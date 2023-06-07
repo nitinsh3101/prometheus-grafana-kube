@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: blackbox-exporter
+  namespace: monitoring
+  labels:
+    app: blackbox-exporter
+spec:
+  replicas: 2 
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: blackbox-exporter
+  template:
+    metadata:
+      labels:
+        app: blackbox-exporter
+    spec:
+      restartPolicy: Always
+      containers:
+        - name: blackbox-exporter
+          image: prom/blackbox-exporter
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 9115
+              name: blackbox
+          args:
+            - "--config.file=/etc/blackbox_exporter/config.yml"
+          volumeMounts:
+            - name: blackbox-config-volume
+              mountPath: /etc/blackbox_exporter
+      restartPolicy: Always
+      volumes:
+        - name: blackbox-config-volume
+          configMap:
+            defaultMode: 420
+            name: blackbox-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: blackbox-exporter-service
+  namespace: monitoring
+  labels:
+    app: blackbox-exporter
+spec:
+  selector:
+    app: blackbox-exporter
+  ports:
+    - protocol: TCP
+      port: 9115
+      targetPort: 9115
+  type: ClusterIP
+
+
